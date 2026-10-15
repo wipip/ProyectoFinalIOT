@@ -22,10 +22,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-URL = st.secrets["INFLUX_URL"]
-TOKEN = st.secrets["INFLUX_TOKEN"]
-ORG = st.secrets["INFLUX_ORG"]
-BUCKET = st.secrets["INFLUX_BUCKET"]
+url = "https://us-east-1-1.aws.cloud2.influxdata.com"
+token = "5FESPQw5t4qA4GgZmyeZ9mu7u1sbtauo4Hh8tjRi1E8sdrIgzXAX5ESk4n5MmcpAjJWEGgEKklFX0LNasnUmng=="
+org = "miguelcmo"
+bucket = "iot_telemetry_data"
+
+client = InfluxDBClient(url=url, token=token, org=org)
+query_api = client.query_api()
 
 COLD_URL = (
     "https://raw.githubusercontent.com/wipip/"
