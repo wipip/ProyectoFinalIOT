@@ -2,3 +2,13 @@ streamlit
 influxdb-client
 pandas
 plotly
+
+
+time
+
+
+
+requests
+
+
+lottie
