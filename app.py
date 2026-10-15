@@ -1,11 +1,9 @@
 
-import time
-
+import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import plotly.graph_objects as go
 import requests
-import streamlit as st
-import streamlit.components.v1 as components
 
 from influxdb_client import InfluxDBClient
 from streamlit_lottie import st_lottie
@@ -13,27 +11,18 @@ from streamlit_autorefresh import st_autorefresh
 
 
 # =========================================================
-# CONFIGURACIÓN
+# CONFIGURACION INFLUXDB
 # =========================================================
-st.set_page_config(
-    page_title="IoT | Climate Monitor",
-    page_icon="🌡️",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-url = "https://us-east-1-1.aws.cloud2.influxdata.com"
-token = "5FESPQw5t4qA4GgZmyeZ9mu7u1sbtauo4Hh8tjRi1E8sdrIgzXAX5ESk4n5MmcpAjJWEGgEKklFX0LNasnUmng=="
-org = "miguelcmo"
-bucket = "iot_telemetry_data"
-
-client = InfluxDBClient(url=url, token=token, org=org)
-query_api = client.query_api()
+URL = "https://us-east-1-1.aws.cloud2.influxdata.com"
+TOKEN = "PEGA_AQUI_TU_TOKEN_VALIDO"
+ORG = "miguelcmo"
+BUCKET = "iot_telemetry_data"
 
 COLD_URL = (
     "https://raw.githubusercontent.com/wipip/"
     "iotDASHBOARDjuanS/main/Cold.json"
 )
+
 SUMMER_URL = (
     "https://raw.githubusercontent.com/wipip/"
     "iotDASHBOARDjuanS/main/Summer.%20Sale%20Animation.json"
@@ -41,7 +30,18 @@ SUMMER_URL = (
 
 
 # =========================================================
-# ESTILOS: GLASSMORPHISM, NEÓN Y HOVER
+# CONFIGURACION STREAMLIT
+# =========================================================
+st.set_page_config(
+    page_title="IoT Climate Dashboard",
+    page_icon="🌡️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+
+# =========================================================
+# ESTILOS CSS
 # =========================================================
 st.markdown("""
 <style>
@@ -49,8 +49,8 @@ st.markdown("""
 
 :root {
     --accent: #36d9ff;
-    --panel: rgba(12, 22, 40, 0.80);
-    --border: rgba(83, 190, 255, 0.20);
+    --panel: rgba(12, 22, 40, 0.88);
+    --border: rgba(83, 190, 255, 0.25);
 }
 
 html, body, [class*="css"] {
@@ -60,9 +60,9 @@ html, body, [class*="css"] {
 .stApp {
     background:
         radial-gradient(ellipse at 15% 10%,
-            rgba(0, 125, 255, .10), transparent 40%),
+            rgba(0, 125, 255, .12), transparent 40%),
         radial-gradient(ellipse at 85% 85%,
-            rgba(255, 40, 75, .08), transparent 40%),
+            rgba(255, 40, 75, .09), transparent 40%),
         #070b14;
 }
 
@@ -81,12 +81,17 @@ h1, h2, h3 {
     letter-spacing: -0.7px;
 }
 
+p, label {
+    color: #b6c6dc;
+}
+
 [data-testid="stMetric"] {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 18px 20px;
-    transition: border-color .25s ease, box-shadow .25s ease,
+    transition: border-color .25s ease,
+                box-shadow .25s ease,
                 transform .25s ease;
     backdrop-filter: blur(12px);
 }
@@ -94,8 +99,8 @@ h1, h2, h3 {
 [data-testid="stMetric"]:hover {
     transform: translateY(-3px);
     border-color: var(--accent);
-    box-shadow: 0 0 18px rgba(54, 217, 255, .18),
-                0 0 35px rgba(54, 217, 255, .08);
+    box-shadow: 0 0 18px rgba(54,217,255,.22),
+                0 0 35px rgba(54,217,255,.09);
 }
 
 [data-testid="stMetricLabel"] {
@@ -107,16 +112,11 @@ h1, h2, h3 {
     font-weight: 800;
 }
 
-[data-testid="stVerticalBlockBorderWrapper"] {
-    border-color: var(--border);
-    border-radius: 18px;
-}
-
 .stButton > button,
 .stDownloadButton > button {
-    border: 1px solid rgba(54, 217, 255, .45);
+    border: 1px solid rgba(54,217,255,.45);
     border-radius: 12px;
-    background: rgba(15, 34, 56, .85);
+    background: rgba(15,34,56,.9);
     color: #eafaff;
     transition: all .25s ease;
 }
@@ -125,14 +125,14 @@ h1, h2, h3 {
 .stDownloadButton > button:hover {
     border-color: #36d9ff;
     color: white;
-    box-shadow: 0 0 12px rgba(54, 217, 255, .45),
-                0 0 28px rgba(54, 217, 255, .20);
+    box-shadow: 0 0 12px rgba(54,217,255,.45),
+                0 0 28px rgba(54,217,255,.2);
     transform: translateY(-2px);
 }
 
 [data-testid="stSidebar"] {
-    background: rgba(8, 15, 29, .96);
-    border-right: 1px solid rgba(83, 190, 255, .15);
+    background: rgba(8,15,29,.96);
+    border-right: 1px solid rgba(83,190,255,.15);
 }
 
 [data-testid="stPlotlyChart"] {
@@ -140,8 +140,17 @@ h1, h2, h3 {
     overflow: hidden;
 }
 
-#MainMenu, footer {
-    visibility: hidden;
+[data-testid="stDataFrame"] {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.hero {
+    padding: 12px 0 20px;
+}
+
+.hero p {
+    color: #91a7c4;
 }
 
 .status-pill {
@@ -151,22 +160,14 @@ h1, h2, h3 {
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 1px;
-    background: rgba(54, 217, 255, .10);
+    background: rgba(54,217,255,.10);
     color: #65e5ff;
-    border: 1px solid rgba(54, 217, 255, .30);
-}
-
-.hero {
-    padding: 12px 0 20px 0;
-}
-
-.hero p {
-    color: #91a7c4;
+    border: 1px solid rgba(54,217,255,.30);
 }
 
 .animation-panel {
-    background: rgba(12, 22, 40, .76);
-    border: 1px solid rgba(83, 190, 255, .22);
+    background: rgba(12,22,40,.88);
+    border: 1px solid rgba(83,190,255,.22);
     border-radius: 18px;
     padding: 12px;
     text-align: center;
@@ -174,20 +175,21 @@ h1, h2, h3 {
 }
 
 .animation-panel:hover {
-    border-color: #ff647e;
-    box-shadow: 0 0 24px rgba(255, 65, 100, .20);
+    border-color: var(--accent);
+    box-shadow: 0 0 24px rgba(54,217,255,.20);
 }
 
-div[data-testid="stDataFrame"] {
-    border: 1px solid var(--border);
+div[data-testid="stExpander"] {
+    border-color: var(--border);
     border-radius: 12px;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
 
 # =========================================================
-# ANIMACIONES LOTTIE
+# CARGAR ANIMACIONES LOTTIE
 # =========================================================
 @st.cache_data(ttl=3600, show_spinner=False)
 def load_lottie(url):
@@ -197,10 +199,11 @@ def load_lottie(url):
 
 
 # =========================================================
-# INFLUXDB
+# CONSULTAR INFLUXDB
 # =========================================================
 @st.cache_data(ttl=10, show_spinner=False)
 def load_data(time_range):
+
     query = f'''
     from(bucket: "{BUCKET}")
       |> range(start: {time_range})
@@ -226,8 +229,10 @@ def load_data(time_range):
 
     if isinstance(result, list):
         frames = [frame for frame in result if not frame.empty]
+
         if not frames:
             return pd.DataFrame()
+
         df = pd.concat(frames, ignore_index=True)
     else:
         df = result
@@ -240,7 +245,11 @@ def load_data(time_range):
     for column in ["temperature", "humidity"]:
         if column not in df.columns:
             df[column] = float("nan")
-        df[column] = pd.to_numeric(df[column], errors="coerce")
+
+        df[column] = pd.to_numeric(
+            df[column],
+            errors="coerce",
+        )
 
     df = (
         df.dropna(subset=["_time"])
@@ -252,21 +261,29 @@ def load_data(time_range):
 
 
 # =========================================================
-# FONDO DE PARTÍCULAS INTERACTIVO
+# FONDO DE PARTICULAS INTERACTIVAS
 # =========================================================
 def render_particles(temperature):
-    # 0 = azul frío, 1 = rojo cálido
-    normalized = max(0.0, min(1.0, (temperature - 15) / 25))
+
+    # 15 °C = azul, 40 °C = rojo
+    normalized = max(
+        0.0,
+        min(1.0, (temperature - 15.0) / 25.0),
+    )
 
     components.html(
         f"""
         <script>
-        const oldCanvas = window.parent.document.getElementById(
+        const root = window.parent;
+        const doc = root.document;
+
+        const oldCanvas = doc.getElementById(
             "iot-particle-background"
         );
+
         if (oldCanvas) oldCanvas.remove();
 
-        const canvas = window.parent.document.createElement("canvas");
+        const canvas = doc.createElement("canvas");
         canvas.id = "iot-particle-background";
 
         Object.assign(canvas.style, {{
@@ -276,33 +293,41 @@ def render_particles(temperature):
             height: "100%",
             zIndex: "0",
             pointerEvents: "none",
-            opacity: "0.72"
+            opacity: "0.68"
         }});
 
-        window.parent.document.body.prepend(canvas);
+        doc.body.prepend(canvas);
 
         const ctx = canvas.getContext("2d");
-        const root = window.parent;
         const intensity = {normalized};
 
         let width, height, particles = [];
-        const mouse = {{ x: -1000, y: -1000 }};
-        const count = Math.min(
-            120,
-            Math.floor(root.innerWidth / 12)
-        );
+
+        const mouse = {{
+            x: -1000,
+            y: -1000
+        }};
 
         function resize() {{
-            width = canvas.width = root.innerWidth;
-            height = canvas.height = root.innerHeight;
+            const dpr = Math.min(root.devicePixelRatio || 1, 2);
+
+            width = root.innerWidth;
+            height = root.innerHeight;
+
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }}
 
         function color(t) {{
-            const blue = [40, 170, 255];
-            const red = [255, 45, 75];
-            const rgb = blue.map(
-                (v, i) => Math.round(v + (red[i] - v) * t)
+            const cold = [40, 170, 255];
+            const hot = [255, 45, 75];
+
+            const rgb = cold.map((v, i) =>
+                Math.round(v + (hot[i] - v) * t)
             );
+
             return `rgb(${{rgb.join(",")}})`;
         }}
 
@@ -310,19 +335,28 @@ def render_particles(temperature):
             return {{
                 x: Math.random() * width,
                 y: Math.random() * height,
-                vx: (Math.random() - 0.5) * 0.55,
-                vy: (Math.random() - 0.5) * 0.55,
-                r: 1 + Math.random() * 2.0,
-                phase: Math.random()
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: (Math.random() - 0.5) * 0.5,
+                r: 1 + Math.random() * 1.8
             }};
         }}
 
         function init() {{
             resize();
-            particles = Array.from({{length: count}}, makeParticle);
+
+            const count = Math.min(
+                100,
+                Math.floor(width / 14)
+            );
+
+            particles = Array.from(
+                {{ length: count }},
+                makeParticle
+            );
         }}
 
         root.addEventListener("resize", resize);
+
         root.addEventListener("pointermove", e => {{
             mouse.x = e.clientX;
             mouse.y = e.clientY;
@@ -337,12 +371,13 @@ def render_particles(temperature):
                 const dist = Math.sqrt(dx*dx + dy*dy);
 
                 if (dist < 140 && dist > 0) {{
-                    p.vx -= dx / dist * 0.025;
-                    p.vy -= dy / dist * 0.025;
+                    p.vx -= dx / dist * 0.018;
+                    p.vy -= dy / dist * 0.018;
                 }}
 
                 p.vx *= 0.995;
                 p.vy *= 0.995;
+
                 p.x += p.vx;
                 p.y += p.vy;
 
@@ -350,6 +385,7 @@ def render_particles(temperature):
                 if (p.y < 0 || p.y > height) p.vy *= -1;
 
                 const c = color(intensity);
+
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
                 ctx.fillStyle = c;
@@ -364,19 +400,19 @@ def render_particles(temperature):
                     const ddy = q.y - p.y;
                     const d = Math.sqrt(ddx*ddx + ddy*ddy);
 
-                    if (d < 100) {{
+                    if (d < 95) {{
                         ctx.beginPath();
                         ctx.moveTo(p.x, p.y);
                         ctx.lineTo(q.x, q.y);
-                        ctx.strokeStyle = c.replace("rgb", "rgba")
-                            .replace(")", `,${{0.15 * (1-d/100)}})`);
+                        ctx.strokeStyle =
+                            `rgba(120,190,255,${{0.16*(1-d/95)}})`;
                         ctx.lineWidth = 0.7;
                         ctx.stroke();
                     }}
                 }}
             }});
 
-            requestAnimationFrame(animate);
+            root.requestAnimationFrame(animate);
         }}
 
         init();
@@ -389,7 +425,7 @@ def render_particles(temperature):
 
 
 # =========================================================
-# SIDEBAR
+# BARRA LATERAL
 # =========================================================
 st.sidebar.markdown("## ⚙️ Configuración")
 
@@ -400,15 +436,14 @@ time_range = st.sidebar.selectbox(
 )
 
 refresh = st.sidebar.slider(
-    "Actualización automática (segundos)",
+    "Auto-refresh (segundos)",
     min_value=0,
     max_value=60,
     value=10,
 )
 
-st.sidebar.caption("Temperaturas expresadas en °C.")
 st.sidebar.markdown("---")
-st.sidebar.markdown("**Umbrales climáticos**")
+st.sidebar.markdown("### 🌡️ Umbrales")
 st.sidebar.markdown("🔵 Frío: menos de 25 °C")
 st.sidebar.markdown("🟣 Neutral: 25–30 °C")
 st.sidebar.markdown("🔴 Calor: más de 30 °C")
@@ -433,20 +468,21 @@ st.markdown("""
 
 
 # =========================================================
-# DATOS
+# CARGAR DATOS
 # =========================================================
 try:
     df = load_data(time_range)
-except Exception as error:
+except Exception:
     st.error(
         "No se pudieron cargar los datos de InfluxDB. "
-        "Verifica las credenciales y la conexión."
+        "Verifica URL, token, organización y bucket."
     )
-    st.exception(error)
     st.stop()
 
 if df.empty:
-    st.warning("No hay datos disponibles en este rango de tiempo.")
+    st.warning(
+        "No hay datos disponibles en el rango seleccionado."
+    )
     st.stop()
 
 valid_temp = df.dropna(subset=["temperature"])
@@ -465,6 +501,7 @@ current_humidity = (
 )
 
 avg_temp = float(valid_temp["temperature"].mean())
+
 avg_humidity = (
     float(valid_humidity["humidity"].mean())
     if not valid_humidity.empty
@@ -473,16 +510,18 @@ avg_humidity = (
 
 
 # =========================================================
-# COLOR SEGÚN TEMPERATURA
+# ESTADO CLIMATICO Y COLOR
 # =========================================================
 if current_temp < 25:
     accent = "#36d9ff"
     climate = "COLD"
     climate_message = "Ambiente frío"
+
 elif current_temp > 30:
     accent = "#ff496c"
     climate = "SUMMER"
     climate_message = "Ambiente cálido"
+
 else:
     accent = "#b58cff"
     climate = "NEUTRAL"
@@ -491,7 +530,9 @@ else:
 st.markdown(
     f"""
     <style>
-    :root {{ --accent: {accent}; }}
+    :root {{
+        --accent: {accent};
+    }}
     </style>
     """,
     unsafe_allow_html=True,
@@ -499,40 +540,59 @@ st.markdown(
 
 
 # =========================================================
-# PARTÍCULAS
+# FONDO ANIMADO
 # =========================================================
 render_particles(current_temp)
 
 
 # =========================================================
-# MÉTRICAS + ANIMACIÓN
+# METRICAS Y ANIMACIONES
 # =========================================================
-data_col, animation_col = st.columns([2.3, 1], gap="large")
+data_col, animation_col = st.columns(
+    [2.3, 1],
+    gap="large",
+)
 
 with data_col:
     st.subheader("📡 Datos ambientales")
 
     c1, c2 = st.columns(2)
-    c1.metric("🌡️ Temperatura actual", f"{current_temp:.2f} °C")
+
+    c1.metric(
+        "🌡️ Temperatura actual",
+        f"{current_temp:.2f} °C",
+    )
+
     c2.metric(
         "💧 Humedad actual",
-        f"{current_humidity:.2f} %" if pd.notna(current_humidity)
+        f"{current_humidity:.2f} %"
+        if pd.notna(current_humidity)
         else "Sin datos",
     )
 
     c3, c4 = st.columns(2)
-    c3.metric("📊 Temperatura promedio", f"{avg_temp:.2f} °C")
+
+    c3.metric(
+        "📊 Temperatura promedio",
+        f"{avg_temp:.2f} °C",
+    )
+
     c4.metric(
         "📊 Humedad promedio",
-        f"{avg_humidity:.2f} %" if pd.notna(avg_humidity)
+        f"{avg_humidity:.2f} %"
+        if pd.notna(avg_humidity)
         else "Sin datos",
     )
 
     st.markdown(
-        f'<span class="status-pill">{climate} · '
-        f'{climate_message} · {current_temp:.1f} °C</span>',
+        f"""
+        <span class="status-pill">
+            {climate} · {climate_message} · {current_temp:.1f} °C
+        </span>
+        """,
         unsafe_allow_html=True,
     )
+
 
 with animation_col:
     st.subheader("🌤️ Estado climático")
@@ -540,11 +600,15 @@ with animation_col:
     try:
         if current_temp < 25:
             animation = load_lottie(COLD_URL)
+
             st.markdown(
-                '<div class="animation-panel">'
-                '<h3 style="color:#36d9ff">❄️ COLD MODE</h3>',
+                """
+                <div class="animation-panel">
+                    <h3 style="color:#36d9ff">❄️ COLD MODE</h3>
+                """,
                 unsafe_allow_html=True,
             )
+
             st_lottie(
                 animation,
                 height=230,
@@ -552,19 +616,28 @@ with animation_col:
                 speed=1,
                 loop=True,
             )
+
             st.markdown(
-                '<p style="text-align:center;color:#91cfff">'
-                'Temperatura inferior a 25 °C</p></div>',
+                """
+                    <p style="color:#91cfff">
+                        Temperatura inferior a 25 °C
+                    </p>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
 
         elif current_temp > 30:
             animation = load_lottie(SUMMER_URL)
+
             st.markdown(
-                '<div class="animation-panel">'
-                '<h3 style="color:#ff647e">☀️ SUMMER MODE</h3>',
+                """
+                <div class="animation-panel">
+                    <h3 style="color:#ff647e">☀️ SUMMER MODE</h3>
+                """,
                 unsafe_allow_html=True,
             )
+
             st_lottie(
                 animation,
                 height=230,
@@ -572,38 +645,45 @@ with animation_col:
                 speed=1,
                 loop=True,
             )
+
             st.markdown(
-                '<p style="text-align:center;color:#ff9eac">'
-                'Temperatura superior a 30 °C</p></div>',
+                """
+                    <p style="color:#ff9eac">
+                        Temperatura superior a 30 °C
+                    </p>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
 
         else:
             st.markdown(
-                '<div class="animation-panel">'
-                '<h3 style="color:#b58cff">🌤️ COMFORT MODE</h3>'
-                '<p style="color:#c4b4ff;font-size:48px">◈</p>'
-                '<p style="color:#c0cce0">'
-                'Temperatura entre 25 y 30 °C</p></div>',
+                """
+                <div class="animation-panel">
+                    <h3 style="color:#b58cff">🌤️ COMFORT MODE</h3>
+                    <p style="font-size:48px;color:#b58cff">◈</p>
+                    <p>Temperatura entre 25 y 30 °C</p>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
 
     except Exception:
-        st.info(
+        st.warning(
             "No se pudo cargar la animación. "
-            "Comprueba que los archivos JSON sean accesibles."
+            "Comprueba que el JSON sea accesible."
         )
 
 
 # =========================================================
-# GRÁFICAS CON EFECTO GLOW
+# GRAFICA PRINCIPAL CON GLOW
 # =========================================================
 st.markdown("---")
 st.subheader("📈 Evolución de temperatura y humedad")
 
 fig = go.Figure()
 
-# Brillo de fondo de la temperatura
+# Resplandor de temperatura
 fig.add_trace(go.Scatter(
     x=valid_temp["_time"],
     y=valid_temp["temperature"],
@@ -613,7 +693,7 @@ fig.add_trace(go.Scatter(
     showlegend=False,
 ))
 
-# Línea principal de temperatura
+# Temperatura
 fig.add_trace(go.Scatter(
     x=valid_temp["_time"],
     y=valid_temp["temperature"],
@@ -624,18 +704,18 @@ fig.add_trace(go.Scatter(
     hovertemplate="%{y:.2f} °C<extra>Temperatura</extra>",
 ))
 
-# Brillo de fondo de humedad
+# Resplandor de humedad
 fig.add_trace(go.Scatter(
     x=valid_humidity["_time"],
     y=valid_humidity["humidity"],
     mode="lines",
-    line=dict(color="rgba(255,73,108,0.10)", width=12),
+    line=dict(color="rgba(255,73,108,0.12)", width=12),
     hoverinfo="skip",
     showlegend=False,
     yaxis="y2",
 ))
 
-# Línea principal de humedad
+# Humedad
 fig.add_trace(go.Scatter(
     x=valid_humidity["_time"],
     y=valid_humidity["humidity"],
@@ -649,7 +729,7 @@ fig.add_trace(go.Scatter(
 fig.update_layout(
     template="plotly_dark",
     paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(8,15,29,0.60)",
+    plot_bgcolor="rgba(8,15,29,0.65)",
     font=dict(color="#d8e6f7", family="Inter"),
     height=430,
     margin=dict(l=15, r=15, t=30, b=15),
@@ -686,7 +766,10 @@ fig.update_layout(
 st.plotly_chart(
     fig,
     use_container_width=True,
-    config={"displayModeBar": True, "displaylogo": False},
+    config={
+        "displayModeBar": True,
+        "displaylogo": False,
+    },
 )
 
 
@@ -723,6 +806,7 @@ if not df_resampled.empty:
             showlegend=False,
         ))
 
+        # Línea principal
         fig2.add_trace(go.Scatter(
             x=series["_time"],
             y=series[column],
@@ -730,13 +814,15 @@ if not df_resampled.empty:
             name=label,
             line=dict(color=color, width=2),
             marker=dict(size=4),
-            hovertemplate=f"%{{y:.2f}} {unit}<extra>{label}</extra>",
+            hovertemplate=(
+                f"%{{y:.2f}} {unit}<extra>{label}</extra>"
+            ),
         ))
 
     fig2.update_layout(
         template="plotly_dark",
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(8,15,29,0.60)",
+        plot_bgcolor="rgba(8,15,29,0.65)",
         font=dict(color="#d8e6f7", family="Inter"),
         height=350,
         hovermode="x unified",
@@ -745,11 +831,15 @@ if not df_resampled.empty:
         yaxis_title="Promedio",
     )
 
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(
+        fig2,
+        use_container_width=True,
+        config={"displaylogo": False},
+    )
 
 
 # =========================================================
-# DATOS CRUDOS
+# DATOS CRUDOS Y DESCARGA
 # =========================================================
 with st.expander("📋 Consultar datos crudos"):
     st.dataframe(
@@ -759,6 +849,7 @@ with st.expander("📋 Consultar datos crudos"):
     )
 
     csv = df.to_csv(index=False).encode("utf-8")
+
     st.download_button(
         "⬇️ Descargar CSV",
         data=csv,
@@ -766,8 +857,14 @@ with st.expander("📋 Consultar datos crudos"):
         mime="text/csv",
     )
 
+
+# =========================================================
+# PIE DE PAGINA
+# =========================================================
+st.markdown("---")
+
 st.caption(
-    f"Actualización configurada: "
-    f"{refresh} s · Rango consultado: {time_range} · "
-    f"Unidad de temperatura: °C"
+    f"Climate Intelligence · Actualización: "
+    f"{refresh} s · Rango: {time_range} · "
+    f"Temperatura: °C"
 )
