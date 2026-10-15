@@ -1,14 +1,7 @@
 streamlit
+streamlit-lottie
+streamlit-autorefresh
 influxdb-client
 pandas
 plotly
-
-
-time
-
-
-
 requests
-
-
-lottie
