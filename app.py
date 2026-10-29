@@ -1,4 +1,5 @@
 import openai
+import pandas as pd
 import streamlit as st
 
 st.set_page_config(
@@ -6,6 +7,33 @@ st.set_page_config(
 )
 
 st.title("🩺 Asistente Inteligente del Tótem EAFIT")
+
+
+# --- CARGAR Y RESUMIR EL CSV DESDE GITHUB (CAMBIO MÍNIMO) ---
+@st.cache_data
+def cargar_datos_csv():
+  # Lee el archivo CSV que está en la misma raíz del repositorio en GitHub
+  df = pd.read_csv("proyecto_integrador_eafit_max30102.csv")
+  return df
+
+
+try:
+  df_datos = cargar_datos_csv()
+
+  # Crear un resumen estadístico rápido para que la IA lo entienda
+  total_meds = len(df_datos)
+  total_estudiantes = df_datos["student_id"].nunique()
+  validas = df_datos[df_datos["measurement_status"] == "valid"]
+  bpm_prom = round(validas["heart_rate_bpm"].mean(), 1)
+  spo2_prom = round(validas["spo2_percent"].mean(), 1)
+
+  resumen_contexto = (
+      f"Resumen de datos del tótem EAFIT: Total de registros: {total_meds},"
+      f" Estudiantes únicos: {total_estudiantes}, Frecuencia cardíaca promedio"
+      f" (válida): {bpm_prom} BPM, SpO2 promedio (válida): {spo2_prom}%."
+  )
+except Exception as e:
+  resumen_contexto = "No se pudo cargar el archivo CSV de datos."
 
 # --- BARRA LATERAL PARA LA CONFIGURACIÓN DE LA API KEY ---
 st.sidebar.header("🔑 Configuración")
@@ -44,21 +72,22 @@ else:
     with st.chat_message("assistant"):
       with st.spinner("Analizando datos del tótem..."):
         try:
-          # Instanciar el cliente de OpenAI con la key ingresada en tiempo de ejecución
           client = openai.OpenAI(api_key=user_api_key)
+
+          # Prompt del sistema que incluye los datos reales del CSV de GitHub
+          system_prompt = (
+              "Eres un asistente analítico del tótem IoT de salud de la"
+              " Universidad EAFIT. Utiliza la siguiente información real"
+              " derivada del archivo CSV del proyecto para responder las dudas"
+              f" del estudiante: {resumen_contexto}. Ayudas a interpretar datos"
+              " estadísticos de BPM y SpO2 de forma educativa y sin emitir"
+              " diagnósticos médicos."
+          )
 
           response = client.chat.completions.create(
               model="gpt-4o-mini",
               messages=[
-                  {
-                      "role": "system",
-                      "content": (
-                          "Eres un asistente analítico del tótem IoT de salud"
-                          " de la Universidad EAFIT. Ayudas a interpretar datos"
-                          " estadísticos de BPM y SpO2 de forma educativa y sin"
-                          " emitir diagnósticos médicos."
-                      ),
-                  },
+                  {"role": "system", "content": system_prompt},
                   {"role": "user", "content": prompt},
               ],
           )
