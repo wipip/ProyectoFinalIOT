@@ -9,7 +9,7 @@ st.set_page_config(
 st.title("🩺 Asistente Inteligente del Tótem EAFIT")
 
 
-# --- CARGAR Y RESUMIR EL CSV DESDE GITHUB (CAMBIO MÍNIMO) ---
+# --- CARGAR Y RESUMIR EL CSV DESDE GITHUB ---
 @st.cache_data
 def cargar_datos_csv():
   # Lee el archivo CSV que está en la misma raíz del repositorio en GitHub
@@ -20,20 +20,31 @@ def cargar_datos_csv():
 try:
   df_datos = cargar_datos_csv()
 
-  # Crear un resumen estadístico rápido para que la IA lo entienda
+  # Procesar fechas y horas para que la IA tenga contexto temporal
+  df_datos["timestamp"] = pd.to_datetime(df_datos["timestamp"], utc=True)
+  df_datos["hora"] = df_datos["timestamp"].dt.hour
+
+  # Crear un resumen estadístico detallado para el asistente
   total_meds = len(df_datos)
   total_estudiantes = df_datos["student_id"].nunique()
   validas = df_datos[df_datos["measurement_status"] == "valid"]
   bpm_prom = round(validas["heart_rate_bpm"].mean(), 1)
   spo2_prom = round(validas["spo2_percent"].mean(), 1)
 
+  # Calcular la hora con mayor ritmo cardíaco promedio
+  pico_hora = validas.groupby("hora")["heart_rate_bpm"].mean().idxmax()
+  pico_bpm = round(validas.groupby("hora")["heart_rate_bpm"].mean().max(), 1)
+
   resumen_contexto = (
       f"Resumen de datos del tótem EAFIT: Total de registros: {total_meds},"
       f" Estudiantes únicos: {total_estudiantes}, Frecuencia cardíaca promedio"
-      f" (válida): {bpm_prom} BPM, SpO2 promedio (válida): {spo2_prom}%."
+      f" (válida): {bpm_prom} BPM, SpO2 promedio (válida): {spo2_prom}%. "
+      f"Dato clave de horario: La hora del día con el ritmo cardíaco promedio más"
+      f" alto registrado es a las {pico_hora}:00 horas, con un promedio de"
+      f" {pico_bpm} BPM."
   )
 except Exception as e:
-  resumen_contexto = "No se pudo cargar el archivo CSV de datos."
+  resumen_contexto = "No se pudo cargar o procesar el archivo CSV de datos."
 
 # --- BARRA LATERAL PARA LA CONFIGURACIÓN DE LA API KEY ---
 st.sidebar.header("🔑 Configuración")
@@ -74,7 +85,7 @@ else:
         try:
           client = openai.OpenAI(api_key=user_api_key)
 
-          # Prompt del sistema que incluye los datos reales del CSV de GitHub
+          # Prompt del sistema que incluye los datos enriquecidos del CSV
           system_prompt = (
               "Eres un asistente analítico del tótem IoT de salud de la"
               " Universidad EAFIT. Utiliza la siguiente información real"
