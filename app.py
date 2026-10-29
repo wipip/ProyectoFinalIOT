@@ -1,7 +1,7 @@
 """
 Proyecto Integrador Final: Dashboard IoT Tótem EAFIT
 Computación Física e Internet de las Cosas - Universidad EAFIT
-Diseño de precisión: Copiloto IA permanente, alineación proporcional y visualización fluida.
+Arquitectura Zero-Sidebar: Control integrado, Copiloto permanente y visualizaciones limpias.
 """
 
 import streamlit as st
@@ -13,177 +13,175 @@ import json
 import openai
 
 # ==============================================================================
-# 1. CONFIGURACIÓN GENERAL Y SISTEMA DE DISEÑO VISUAL
+# 1. CONFIGURACIÓN DE PÁGINA Y SISTEMA DE DISEÑO VISUAL
 # ==============================================================================
 st.set_page_config(
-    page_title="Tótem IoT Fisiológico | EAFIT",
+    page_title="Tótem Fisiológico IoT | EAFIT",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
+# Inyección de estilos de precisión
 st.markdown("""
 <style>
-    /* Tipografía y paleta base */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
     
+    /* Fondo principal y canvas */
     .stApp {
-        background-color: #080c15;
-        color: #f1f5f9;
-        font-family: 'Inter', -apple-system, sans-serif;
+        background-color: #060911;
+        color: #e2e8f0;
+        font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
     }
     
-    /* Animación de entrada suave */
-    @keyframes smoothFadeIn {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
+    /* Ocultar barra lateral permanentemente */
+    section[data-testid="stSidebar"], [data-testid="collapsedControl"] {
+        display: none !important;
     }
     
-    /* Pulso continuo para el badge de estado */
-    @keyframes livePulse {
-        0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(0.85); opacity: 0.4; }
-    }
-    
-    /* Encabezado del dashboard */
-    .dashboard-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-bottom: 12px;
-        margin-bottom: 16px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        animation: smoothFadeIn 0.4s ease-out;
-    }
-    
-    .live-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(16, 185, 129, 0.1);
-        border: 1px solid rgba(16, 185, 129, 0.3);
-        color: #34d399;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.72rem;
-        font-weight: 600;
-        padding: 4px 10px;
-        border-radius: 9999px;
-    }
-    
-    .live-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background-color: #10b981;
-        box-shadow: 0 0 8px #10b981;
-        animation: livePulse 2s infinite ease-in-out;
+    .block-container {
+        padding-top: 1.5rem !important;
+        padding-bottom: 2rem !important;
+        max-width: 100% !important;
     }
 
-    /* Tarjetas de Métricas (KPIs) con alineación y glow controlado */
+    /* Barra Superior de Control (Control Deck) */
+    .control-deck {
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.85) 0%, rgba(10, 16, 30, 0.75) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 14px 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    }
+    
+    /* Tarjetas de Métricas (KPI Cards) */
     div[data-testid="stMetric"] {
-        background: linear-gradient(145deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.6) 100%);
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.85) 0%, rgba(20, 30, 55, 0.5) 100%);
         border: 1px solid rgba(56, 189, 248, 0.18);
         border-radius: 12px;
-        padding: 12px 16px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        animation: smoothFadeIn 0.5s ease-out;
+        padding: 10px 16px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        transition: transform 0.2s ease, border-color 0.2s ease;
     }
     div[data-testid="stMetric"]:hover {
         transform: translateY(-2px);
-        border-color: rgba(56, 189, 248, 0.5);
-        box-shadow: 0 8px 24px rgba(56, 189, 248, 0.18);
+        border-color: rgba(56, 189, 248, 0.45);
+        box-shadow: 0 6px 20px rgba(56, 189, 248, 0.15);
     }
     div[data-testid="stMetric"] label {
-        font-size: 0.78rem !important;
+        font-size: 0.72rem !important;
         font-weight: 600 !important;
         color: #94a3b8 !important;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
+        font-family: 'JetBrains Mono', monospace;
     }
     div[data-testid="stMetric"] [data-testid="stMetricValue"] {
-        font-size: 1.45rem !important;
+        font-size: 1.35rem !important;
         font-weight: 700 !important;
         color: #f8fafc !important;
         font-feature-settings: "tnum";
     }
 
-    /* Pestañas de Navegación */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 4px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        margin-bottom: 14px;
+    /* Transformación de Radio a Segmented Pills Navigation */
+    div[data-testid="stRadio"] > div {
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 4px;
+        gap: 6px;
+        display: inline-flex;
     }
-    .stTabs [data-baseweb="tab"] {
-        background: transparent;
-        color: #94a3b8;
-        font-weight: 500;
-        font-size: 0.86rem;
-        padding: 8px 16px;
-        border-radius: 6px 6px 0 0;
-        transition: all 0.2s ease;
+    div[data-testid="stRadio"] label {
+        background: transparent !important;
+        border: none !important;
+        border-radius: 7px !important;
+        padding: 6px 14px !important;
+        font-size: 0.82rem !important;
+        font-weight: 600 !important;
+        color: #94a3b8 !important;
+        transition: all 0.2s ease !important;
+        margin: 0 !important;
     }
-    .stTabs [aria-selected="true"] {
+    div[data-testid="stRadio"] label:has(input:checked) {
+        background: rgba(56, 189, 248, 0.15) !important;
         color: #38bdf8 !important;
-        border-bottom: 2px solid #38bdf8 !important;
-        background: rgba(56, 189, 248, 0.06) !important;
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    }
+    div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
+        font-size: 0.82rem !important;
+    }
+    div[data-testid="stRadio"] label span {
+        display: none !important; /* Oculta el radio button circular nativo */
     }
 
-    /* Barra lateral */
-    section[data-testid="stSidebar"] {
-        background-color: #050810;
-        border-right: 1px solid rgba(255, 255, 255, 0.06);
+    /* ELIMINACIÓN DE LOS AVATARES CUADRADOS NARANJAS EN CHAT */
+    div[data-testid="stChatMessageAvatarAssistant"],
+    div[data-testid="stChatMessageAvatarUser"] {
+        display: none !important;
     }
-
-    /* Tarjetas de hallazgos y decisiones */
-    .insight-card {
-        background: rgba(15, 23, 42, 0.65);
+    
+    div[data-testid="stChatMessage"] {
+        background: rgba(15, 23, 42, 0.65) !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important;
+        border-radius: 10px !important;
+        padding: 10px 14px !important;
+        margin-bottom: 8px !important;
+    }
+    div[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageContent"]) {
+        gap: 0 !important;
+    }
+    div[data-testid="stChatMessageContent"] {
+        font-size: 0.85rem !important;
+        line-height: 1.45 !important;
+    }
+    
+    /* Tarjeta de Hallazgos */
+    .finding-box {
+        background: rgba(15, 23, 42, 0.6);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-left: 3px solid #38bdf8;
         border-radius: 8px;
-        padding: 14px 16px;
-        margin-bottom: 12px;
-        transition: border-color 0.2s ease;
-    }
-    .insight-card:hover {
-        border-color: rgba(56, 189, 248, 0.6);
+        padding: 12px 16px;
+        margin-bottom: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ==============================================================================
-# 2. CARGA Y PROCESAMIENTO ROBUSTO DE DATOS (ZONA HORARIA COLOMBIA)
+# 2. CARGA Y PROCESAMIENTO ROBUSTO DE DATOS (ZONA HORARIA BOGOTÁ)
 # ==============================================================================
 @st.cache_data
-def load_and_prepare_dataset():
+def load_and_preprocess_data():
     filename = "proyecto_integrador_eafit_max30102.csv"
     try:
         df = pd.read_csv(filename)
     except FileNotFoundError:
-        st.error(f"❌ No se encontró `{filename}` en el directorio raíz. Asegúrate de incluirlo en el repositorio.")
+        st.error(f"❌ No se encontró `{filename}` en el directorio raíz.")
         return None
-    
-    # Normalización temporal UTC -> Bogotá (UTC-5)
+
+    # Conversión temporal UTC -> Bogotá (UTC-5)
     df["ts_utc"] = pd.to_datetime(df["timestamp"], utc=True)
     df["ts_bogota"] = df["ts_utc"].dt.tz_convert("America/Bogota")
     
     df["fecha"] = df["ts_bogota"].dt.date
     df["hora"] = df["ts_bogota"].dt.hour
     
-    dias_map = {0: "Lun", 1: "Mar", 2: "Mié", 3: "Jue", 4: "Vie", 5: "Sáb", 6: "Dom"}
-    df["dia_semana"] = df["ts_bogota"].dt.dayofweek.map(dias_map)
+    dias_es = {0: "Lun", 1: "Mar", 2: "Mié", 3: "Jue", 4: "Vie", 5: "Sáb", 6: "Dom"}
+    df["dia_semana"] = df["ts_bogota"].dt.dayofweek.map(dias_es)
     df["es_valido"] = df["measurement_status"].str.lower() == "valid"
     return df
 
-df_raw = load_and_prepare_dataset()
+df_raw = load_and_preprocess_data()
 if df_raw is None:
     st.stop()
 
 
-# Síntesis analítica profunda para el Copiloto IA
+# Síntesis estructurada para el contexto del Copiloto IA
 @st.cache_data
-def generate_ai_context(df: pd.DataFrame):
+def get_ai_knowledge_base(df: pd.DataFrame):
     validos = df[df["es_valido"]]
     invis = df[~df["es_valido"]]
     conteo_horas = df.groupby("hora")["student_id"].count().to_dict()
@@ -192,204 +190,222 @@ def generate_ai_context(df: pd.DataFrame):
     conteo_dias = df.groupby("dia_semana", observed=False)["student_id"].count().reindex(dias_orden).dropna().to_dict()
 
     return {
-        "periodo_fechas": f"{df['fecha'].min()} al {df['fecha'].max()}",
-        "total_registros": len(df),
+        "fechas_operacion": f"{df['fecha'].min()} al {df['fecha'].max()}",
+        "total_mediciones": len(df),
         "estudiantes_unicos": int(df["student_id"].nunique()),
         "mediciones_validas": len(validos),
         "mediciones_invalidas": len(invis),
-        "tasa_invalidez_pct": round((len(invis) / len(df)) * 100, 1),
+        "tasa_invalidez_porcentaje": round((len(invis) / len(df)) * 100, 1),
         "fisiologia_valida": {
             "bpm_promedio": round(validos["heart_rate_bpm"].mean(), 1),
             "bpm_mediana": round(validos["heart_rate_bpm"].median(), 1),
-            "bpm_q25_q75": [round(validos["heart_rate_bpm"].quantile(0.25), 1), round(validos["heart_rate_bpm"].quantile(0.75), 1)],
+            "bpm_rango_intercuartil": [round(validos["heart_rate_bpm"].quantile(0.25), 1), round(validos["heart_rate_bpm"].quantile(0.75), 1)],
             "spo2_promedio": round(validos["spo2_percent"].mean(), 1),
             "spo2_mediana": round(validos["spo2_percent"].median(), 1)
         },
-        "calidad_senal": {
-            "media_validas": round(validos["signal_quality"].mean(), 3),
-            "media_invalidas": round(invis["signal_quality"].mean(), 3)
+        "calidad_optica_max30102": {
+            "promedio_en_validas": round(validos["signal_quality"].mean(), 3),
+            "promedio_en_invalidas": round(invis["signal_quality"].mean(), 3)
         },
-        "patrones_afluencia": {
-            "hora_pico": f"{hora_pico}:00 horas",
-            "distribucion_dias": conteo_dias
+        "afluencia_campus": {
+            "hora_pico": f"{hora_pico}:00 hrs",
+            "dias_distribucion": conteo_dias
         },
-        "top_5_estudiantes_recurrentes": df["student_id"].value_counts().head(5).to_dict()
+        "estudiantes_mas_frecuentes": df["student_id"].value_counts().head(5).to_dict()
     }
 
-contexto_ia = generate_ai_context(df_raw)
+ai_context = get_ai_knowledge_base(df_raw)
 
 
 # ==============================================================================
-# 3. FILTROS EN BARRA LATERAL (LIMPIOS Y ACCIONABLES)
+# 3. ENCABEZADO Y BARRA DE CONTROL INTEGRADA (CONTROL DECK)
 # ==============================================================================
-with st.sidebar:
-    st.markdown("### ⚡ Parámetros del Tótem")
-    st.caption("Control de visualización reactiva")
-    
-    # 1. Rango de Fechas
-    f_min, f_max = df_raw["fecha"].min(), df_raw["fecha"].max()
-    rango_fecha = st.date_input("Período de Análisis:", value=(f_min, f_max), min_value=f_min, max_value=f_max)
-    
-    # 2. Estado de Medición
-    filtro_estado = st.radio("Validez de Registros:", ["Todos", "Solo Válidos", "Solo Inválidos"], index=0, horizontal=True)
-    
-    # 3. Estudiante
-    estudiantes_disponibles = ["Todos"] + sorted(df_raw["student_id"].unique().tolist())
-    filtro_estudiante = st.selectbox("Estudiante (ID):", estudiantes_disponibles, index=0)
-    
-    st.markdown("---")
-    st.markdown("### 🔑 Inteligencia Artificial")
+c_title, c_api = st.columns([3.2, 1.8])
+with c_title:
+    st.markdown("""
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
+        <h2 style="margin:0; font-size:1.45rem; font-weight:700; color:#ffffff;">Tótem Fisiológico IoT // Campus EAFIT</h2>
+        <span style="background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:3px 10px; border-radius:9999px; font-size:0.72rem; font-weight:600; font-family:'JetBrains Mono';">MAX30102 ONLINE</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.caption("Procesamiento de pulsaciones ópticas y transpondedores NFC en tiempo real (UTC-5).")
+
+with c_api:
     api_key_input = st.text_input(
         "OpenAI API Key:",
         type="password",
-        placeholder="sk-...",
-        help="Clave para habilitar el razonamiento del Copiloto IA."
+        placeholder="Introduce tu sk-... para habilitar IA",
+        label_visibility="collapsed"
     )
+
+# Barra de Herramientas de Filtrado Horizontal
+with st.container():
+    st.markdown('<div class="control-deck">', unsafe_allow_html=True)
+    f1, f2, f3 = st.columns([1.4, 1.4, 1.2])
     
-    st.markdown("---")
-    st.caption("EAFIT · Computación Física e IoT | MAX30102 + ESP32")
+    with f1:
+        min_date, max_date = df_raw["fecha"].min(), df_raw["fecha"].max()
+        filtro_fechas = st.date_input(
+            "Rango de Fechas:",
+            value=(min_date, max_date),
+            min_value=min_date,
+            max_value=max_date,
+            label_visibility="collapsed"
+        )
+    
+    with f2:
+        filtro_estado = st.radio(
+            "Estado de Medición:",
+            ["Todas", "Válidas", "Inválidas"],
+            index=0,
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+        
+    with f3:
+        lista_estudiantes = ["Todos los Estudiantes"] + sorted(df_raw["student_id"].unique().tolist())
+        filtro_estudiante = st.selectbox(
+            "Filtrar Estudiante:",
+            lista_estudiantes,
+            index=0,
+            label_visibility="collapsed"
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Aplicación matemática de filtros
 df_view = df_raw.copy()
-if isinstance(rango_fecha, (list, tuple)) and len(rango_fecha) == 2:
-    df_view = df_view[(df_view["fecha"] >= rango_fecha[0]) & (df_view["fecha"] <= rango_fecha[1])]
+if isinstance(filtro_fechas, (list, tuple)) and len(filtro_fechas) == 2:
+    df_view = df_view[(df_view["fecha"] >= filtro_fechas[0]) & (df_view["fecha"] <= filtro_fechas[1])]
 
-if filtro_estado == "Solo Válidos":
+if filtro_estado == "Válidas":
     df_view = df_view[df_view["es_valido"]]
-elif filtro_estado == "Solo Inválidos":
+elif filtro_estado == "Inválidas":
     df_view = df_view[~df_view["es_valido"]]
 
-if filtro_estudiante != "Todos":
+if filtro_estudiante != "Todos los Estudiantes":
     df_view = df_view[df_view["student_id"] == filtro_estudiante]
 
 if df_view.empty:
-    st.warning("⚠️ No existen registros con la combinación de filtros seleccionada.")
+    st.warning("⚠️ No se hallaron registros con los filtros seleccionados.")
     st.stop()
 
 
 # ==============================================================================
-# 4. ENCABEZADO Y TARJETAS DE MÉTRICAS (PROPORCIONADAS)
+# 4. TARJETAS DE INDICADORES (5 KPIS REQUERIDOS)
 # ==============================================================================
-st.markdown("""
-<div class="dashboard-header">
-    <div>
-        <h2 style="margin: 0; font-size: 1.55rem; font-weight: 700; color: #f8fafc;">Tótem Fisiológico EAFIT // Monitor IoT</h2>
-        <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: #94a3b8;">Fotopletismografía óptica MAX30102 · Campus EAFIT (UTC-5)</p>
-    </div>
-    <div class="live-indicator">
-        <span class="live-dot"></span> TÓTEM ACTIVO
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# Cálculo de los 5 Indicadores Requeridos
 validos_view = df_view[df_view["es_valido"]]
 invalidos_view = df_view[~df_view["es_valido"]]
 
-total_n = len(df_view)
-estudiantes_n = df_view["student_id"].nunique()
-bpm_mean = round(validos_view["heart_rate_bpm"].mean(), 1) if not validos_view.empty else 0.0
-spo2_mean = round(validos_view["spo2_percent"].mean(), 1) if not validos_view.empty else 0.0
-inval_count = len(invalidos_view)
-inval_pct = round((inval_count / total_n) * 100, 1) if total_n > 0 else 0.0
+n_total = len(df_view)
+n_estudiantes = df_view["student_id"].nunique()
+avg_bpm = round(validos_view["heart_rate_bpm"].mean(), 1) if not validos_view.empty else 0.0
+avg_spo2 = round(validos_view["spo2_percent"].mean(), 1) if not validos_view.empty else 0.0
+n_inval = len(invalidos_view)
+pct_inval = round((n_inval / n_total) * 100, 1) if n_total > 0 else 0.0
 
 k1, k2, k3, k4, k5 = st.columns(5)
-k1.metric("Mediciones", f"{total_n:,}")
-k2.metric("Estudiantes", f"{estudiantes_n}")
-k3.metric("BPM Promedio", f"{bpm_mean} bpm", delta=f"{round(bpm_mean - 75.0, 1)} ref" if bpm_mean > 0 else None)
-k4.metric("SpO₂ Promedio", f"{spo2_mean}%", delta=f"{round(spo2_mean - 98.0, 1)}%" if spo2_mean > 0 else None)
-k5.metric("Tasa de Fallas", f"{inval_pct}%", delta=f"{inval_count} inv.", delta_color="inverse")
+k1.metric("Mediciones", f"{n_total:,}")
+k2.metric("Estudiantes", f"{n_estudiantes}")
+k3.metric("BPM Promedio", f"{avg_bpm} bpm", delta=f"{round(avg_bpm - 75.0, 1)} ref" if avg_bpm > 0 else None)
+k4.metric("SpO₂ Promedio", f"{avg_spo2}%", delta=f"{round(avg_spo2 - 98.0, 1)}%" if avg_spo2 > 0 else None)
+k5.metric("Fallas de Señal", f"{pct_inval}%", delta=f"{n_inval} inv.", delta_color="inverse")
 
-st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
 
 
 # ==============================================================================
-# 5. ESPACIO DE TRABAJO EQUILIBRADO: ANALÍTICA (62%) | COPILOTO IA (38%)
+# 5. WORKSPACE PRINCIPAL: ANALÍTICA (62%) | COPILOTO IA PERMANENTE (38%)
 # ==============================================================================
-col_analytics, col_copilot = st.columns([1.62, 1.0], gap="large")
+col_workspace, col_copilot = st.columns([1.62, 1.0], gap="large")
 
 # ------------------------------------------------------------------------------
-# COLUMNA IZQUIERDA: ANALÍTICA Y VISUALIZACIONES
+# PANEL IZQUIERDO: VISUALIZACIONES & PERFILES
 # ------------------------------------------------------------------------------
-with col_analytics:
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "📊 Biomarcadores", 
-        "⏱️ Patrones de Campus", 
-        "👤 Historial Estudiante", 
-        "📑 Hallazgos Clave"
-    ])
+with col_workspace:
+    # Segmented Pills para cambio de vista inmediato
+    vista_activa = st.radio(
+        "Sección de Análisis:",
+        ["Exploración Biomédica", "Dinámica de Campus", "Historial Estudiante", "Hallazgos Clave"],
+        index=0,
+        horizontal=True,
+        label_visibility="collapsed"
+    )
     
-    # --- PESTAÑA 1: DISTRIBUCIÓN DE BIOMARCADORES ---
-    with tab1:
-        c_hist1, c_hist2 = st.columns(2)
-        with c_hist1:
+    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
+
+    # --- VISTA 1: EXPLORACIÓN BIOMÉDICA ---
+    if vista_activa == "Exploración Biomédica":
+        g1, g2 = st.columns(2)
+        with g1:
             if not validos_view.empty:
                 fig_bpm = px.histogram(
-                    validos_view, x="heart_rate_bpm", nbins=26,
+                    validos_view, x="heart_rate_bpm", nbins=24,
                     color_discrete_sequence=["#38bdf8"],
-                    title="<b>Distribución: Frecuencia Cardíaca (BPM)</b>",
+                    title="<b>Frecuencia Cardíaca (BPM)</b>",
                     labels={"heart_rate_bpm": "BPM", "count": "Frecuencia"}
                 )
                 fig_bpm.add_vrect(
                     x0=60, x1=100, fillcolor="#10b981", opacity=0.12, line_width=0,
-                    annotation_text="Normal (60-100)", annotation_position="top left",
-                    annotation_font=dict(size=10, color="#10b981")
+                    annotation_text="Reposo (60-100)", annotation_position="top left",
+                    annotation_font=dict(size=9, color="#10b981")
                 )
                 fig_bpm.update_layout(
-                    template="plotly_dark", height=240, margin=dict(l=30, r=20, t=35, b=25),
+                    template="plotly_dark", height=230, margin=dict(l=30, r=20, t=35, b=25),
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(15,23,42,0.45)",
-                    font=dict(family="Inter", size=11),
+                    font=dict(family="Plus Jakarta Sans", size=10),
                     xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
                     yaxis=dict(gridcolor="rgba(255,255,255,0.05)")
                 )
-                st.plotly_chart(fig_bpm, use_container_width=True)
+                st.plotly_chart(fig_bpm, use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Sin registros válidos de BPM.")
 
-        with c_hist2:
+        with g2:
             if not validos_view.empty:
                 fig_spo2 = px.histogram(
-                    validos_view, x="spo2_percent", nbins=22,
+                    validos_view, x="spo2_percent", nbins=20,
                     color_discrete_sequence=["#818cf8"],
-                    title="<b>Distribución: Saturación de Oxígeno (SpO₂)</b>",
+                    title="<b>Saturación de Oxígeno (SpO₂)</b>",
                     labels={"spo2_percent": "SpO₂ %", "count": "Frecuencia"}
                 )
                 fig_spo2.add_vline(
                     x=95, line_dash="dash", line_color="#f59e0b",
-                    annotation_text="Alerta (<95%)", annotation_position="top left",
-                    annotation_font=dict(size=10, color="#f59e0b")
+                    annotation_text="Umbral (<95%)", annotation_position="top left",
+                    annotation_font=dict(size=9, color="#f59e0b")
                 )
                 fig_spo2.update_layout(
-                    template="plotly_dark", height=240, margin=dict(l=30, r=20, t=35, b=25),
+                    template="plotly_dark", height=230, margin=dict(l=30, r=20, t=35, b=25),
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(15,23,42,0.45)",
-                    font=dict(family="Inter", size=11),
+                    font=dict(family="Plus Jakarta Sans", size=10),
                     xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
                     yaxis=dict(gridcolor="rgba(255,255,255,0.05)")
                 )
-                st.plotly_chart(fig_spo2, use_container_width=True)
+                st.plotly_chart(fig_spo2, use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Sin registros válidos de SpO₂.")
 
-        # Dispersión BPM vs SpO2 con escala de calidad
+        # Dispersión BPM vs SpO2 con escala desacoplada para evitar solapamiento
         fig_scatter = px.scatter(
             df_view, x="heart_rate_bpm", y="spo2_percent",
-            color="signal_quality", symbol="measurement_status",
-            color_continuous_scale="Tealgrn",
-            title="<b>Correlación Fisiológica vs. Calidad de Señal Óptica</b>",
-            labels={"heart_rate_bpm": "BPM", "spo2_percent": "SpO₂ %", "signal_quality": "Calidad Señal"}
+            color="measurement_status",
+            color_discrete_map={"valid": "#38bdf8", "invalid": "#f43f5e"},
+            hover_data=["student_id", "fecha", "signal_quality"],
+            title="<b>Correlación Fisiológica: BPM vs. SpO₂ (Válidos vs Inválidos)</b>",
+            labels={"heart_rate_bpm": "BPM", "spo2_percent": "SpO₂ %", "measurement_status": "Estado"}
         )
-        fig_scatter.update_traces(marker=dict(size=6.5, opacity=0.8))
+        fig_scatter.update_traces(marker=dict(size=6, opacity=0.8))
         fig_scatter.update_layout(
             template="plotly_dark", height=260, margin=dict(l=30, r=20, t=35, b=25),
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(15,23,42,0.45)",
-            font=dict(family="Inter", size=11),
+            font=dict(family="Plus Jakarta Sans", size=10),
+            legend=dict(orientation="h", y=1.12, x=0, font=dict(size=10)),
             xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
             yaxis=dict(gridcolor="rgba(255,255,255,0.05)")
         )
-        st.plotly_chart(fig_scatter, use_container_width=True)
+        st.plotly_chart(fig_scatter, use_container_width=True, config={"displayModeBar": False})
 
-    # --- PESTAÑA 2: DINÁMICA DE CAMPUS Y CALIDAD IOT ---
-    with tab2:
+    # --- VISTA 2: DINÁMICA DE CAMPUS Y CALIDAD IOT ---
+    elif vista_activa == "Dinámica de Campus":
         dias_orden = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
         heat_df = df_view.pivot_table(
             index="dia_semana", columns="hora", values="student_id",
@@ -402,196 +418,183 @@ with col_analytics:
             labels=dict(x="Hora del Día (0-23)", y="Día", color="Usos")
         )
         fig_heat.update_layout(
-            template="plotly_dark", height=260, margin=dict(l=30, r=20, t=35, b=25),
+            template="plotly_dark", height=250, margin=dict(l=30, r=20, t=35, b=25),
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(15,23,42,0.45)",
-            font=dict(family="Inter", size=11)
+            font=dict(family="Plus Jakarta Sans", size=10)
         )
-        st.plotly_chart(fig_heat, use_container_width=True)
-        
-        # Comparación de calidad óptica de señal
+        st.plotly_chart(fig_heat, use_container_width=True, config={"displayModeBar": False})
+
+        # Comparativa de Calidad de Señal
         fig_box = px.box(
             df_view, x="measurement_status", y="signal_quality",
             color="measurement_status",
             color_discrete_map={"valid": "#10b981", "invalid": "#f43f5e"},
-            title="<b>Distribución de Calidad de Señal según Validez del Registro</b>",
-            labels={"signal_quality": "Índice de Calidad (0.0 - 1.0)", "measurement_status": "Estado"}
+            title="<b>Índice de Calidad Óptica MAX30102 según Validez</b>",
+            labels={"signal_quality": "Calidad (0.0 a 1.0)", "measurement_status": "Estado"}
         )
         fig_box.update_layout(
-            template="plotly_dark", height=240, margin=dict(l=30, r=20, t=35, b=25),
+            template="plotly_dark", height=230, margin=dict(l=30, r=20, t=35, b=25),
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(15,23,42,0.45)",
-            showlegend=False, font=dict(family="Inter", size=11),
+            showlegend=False, font=dict(family="Plus Jakarta Sans", size=10),
             xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
             yaxis=dict(gridcolor="rgba(255,255,255,0.05)")
         )
-        st.plotly_chart(fig_box, use_container_width=True)
+        st.plotly_chart(fig_box, use_container_width=True, config={"displayModeBar": False})
 
-    # --- PESTAÑA 3: SEGUIMIENTO LONGITUDINAL (SIN ERRORES DE SINTAXIS) ---
-    with tab3:
-        estudiante_objetivo = filtro_estudiante if filtro_estudiante != "Todos" else df_raw["student_id"].iloc[0]
-        df_target = df_raw[df_raw["student_id"] == estudiante_objetivo].sort_values("ts_bogota")
+    # --- VISTA 3: HISTORIAL POR ESTUDIANTE (SIN BUGS DE PLOTLY) ---
+    elif vista_activa == "Historial Estudiante":
+        est_target = filtro_estudiante if filtro_estudiante != "Todos los Estudiantes" else df_raw["student_id"].iloc[0]
+        df_target = df_raw[df_raw["student_id"] == est_target].sort_values("ts_bogota")
         
-        st.markdown(f"<span style='color:#38bdf8; font-weight:600;'>Historial de Medición:</span> <code>{estudiante_objetivo}</code>", unsafe_allow_html=True)
+        st.markdown(f"<span style='color:#38bdf8; font-weight:600;'>Historial Clínico-Experimental:</span> <code>{est_target}</code>", unsafe_allow_html=True)
         
-        sc1, sc2, sc3 = st.columns(3)
-        sc1.metric("Visitas Registradas", f"{len(df_target)}")
-        sc2.metric("Primera Lectura", f"{df_target['fecha'].min()}")
-        sc3.metric("Última Lectura", f"{df_target['fecha'].max()}")
+        t1, t2, t3 = st.columns(3)
+        t1.metric("Visitas Registradas", f"{len(df_target)}")
+        t2.metric("Primera Medición", f"{df_target['fecha'].min()}")
+        t3.metric("Última Medición", f"{df_target['fecha'].max()}")
         
-        # Gráfica de doble eje corregida con la sintaxis moderna de Plotly
         fig_long = go.Figure()
         
-        # Serie BPM (Eje Primario Y1)
+        # Traza BPM (Y1)
         fig_long.add_trace(go.Scatter(
-            x=df_target["ts_bogota"],
-            y=df_target["heart_rate_bpm"],
-            mode="lines+markers",
-            name="BPM",
-            line=dict(color="#38bdf8", width=2.5),
-            marker=dict(size=7, color=np.where(df_target["es_valido"], "#38bdf8", "#f43f5e"))
+            x=df_target["ts_bogota"], y=df_target["heart_rate_bpm"],
+            mode="lines+markers", name="BPM",
+            line=dict(color="#38bdf8", width=2),
+            marker=dict(size=6, color=np.where(df_target["es_valido"], "#38bdf8", "#f43f5e"))
         ))
         
-        # Serie SpO2 (Eje Secundario Y2)
+        # Traza SpO2 (Y2)
         fig_long.add_trace(go.Scatter(
-            x=df_target["ts_bogota"],
-            y=df_target["spo2_percent"],
-            mode="lines+markers",
-            name="SpO₂ %",
-            yaxis="y2",
+            x=df_target["ts_bogota"], y=df_target["spo2_percent"],
+            mode="lines+markers", name="SpO₂ %", yaxis="y2",
             line=dict(color="#c084fc", width=2, dash="dot"),
-            marker=dict(size=6, color=np.where(df_target["es_valido"], "#c084fc", "#f43f5e"))
+            marker=dict(size=5, color=np.where(df_target["es_valido"], "#c084fc", "#f43f5e"))
         ))
         
-        # Actualización de layout sin invocar 'titlefont' deprecado
         fig_long.update_layout(
-            template="plotly_dark",
-            height=280,
-            margin=dict(l=35, r=35, t=30, b=25),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(15,23,42,0.45)",
-            font=dict(family="Inter", size=11),
+            template="plotly_dark", height=280, margin=dict(l=35, r=35, t=30, b=25),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(15,23,42,0.45)",
+            font=dict(family="Plus Jakarta Sans", size=10),
             xaxis=dict(gridcolor="rgba(255,255,255,0.06)"),
             yaxis=dict(
-                title=dict(text="BPM (ppm)", font=dict(color="#38bdf8", size=11)),
+                title=dict(text="BPM", font=dict(color="#38bdf8", size=10)),
                 tickfont=dict(color="#38bdf8"),
                 gridcolor="rgba(255,255,255,0.06)"
             ),
             yaxis2=dict(
-                title=dict(text="SpO₂ (%)", font=dict(color="#c084fc", size=11)),
+                title=dict(text="SpO₂ %", font=dict(color="#c084fc", size=10)),
                 tickfont=dict(color="#c084fc"),
-                overlaying="y",
-                side="right",
-                range=[70, 102],
-                showgrid=False
+                overlaying="y", side="right", range=[70, 102], showgrid=False
             ),
-            legend=dict(orientation="h", y=1.12, x=0.5, xanchor="center")
+            legend=dict(orientation="h", y=1.12, x=0)
         )
-        st.plotly_chart(fig_long, use_container_width=True)
+        st.plotly_chart(fig_long, use_container_width=True, config={"displayModeBar": False})
 
-    # --- PESTAÑA 4: HALLAZGOS Y DECISIONES CLAVE ---
-    with tab4:
+    # --- VISTA 4: HALLAZGOS Y DECISIONES CLAVE ---
+    elif vista_activa == "Hallazgos Clave":
         st.markdown(f"""
-        <div class="insight-card">
-            <h5 style="margin: 0 0 4px 0; color: #38bdf8;">1. Concentración Horaria en Cambios de Bloque</h5>
-            <p style="margin: 0; font-size: 0.85rem; color: #cbd5e1;">
-                El uso máximo ocurre de <b>10:00 a 12:00</b> y de <b>14:00 a 16:00</b>. Los mantenimientos del tótem y la limpieza del sensor deben programarse antes de las 08:00 para garantizar disponibilidad continua.
+        <div class="finding-box">
+            <h5 style="margin:0 0 4px 0; color:#38bdf8; font-size:0.9rem;">1. Rutina de Campus y Horas Pico</h5>
+            <p style="margin:0; font-size:0.84rem; color:#cbd5e1;">
+                El uso máximo ocurre de <b>10:00 a 12:00</b> y de <b>14:00 a 16:00</b>. Los mantenimientos deben realizarse antes de las 08:00 para asegurar disponibilidad.
             </p>
         </div>
-        <div class="insight-card">
-            <h5 style="margin: 0 0 4px 0; color: #818cf8;">2. Degeneración Óptica por Retiro Prematuro</h5>
-            <p style="margin: 0; font-size: 0.85rem; color: #cbd5e1;">
-                El <b>{contexto_ia['tasa_invalidez_pct']}%</b> de registros inválidos presenta una calidad óptica media de <b>{contexto_ia['calidad_senal']['media_invalidas']}</b> frente a <b>{contexto_ia['calidad_senal']['media_validas']}</b> en lecturas válidas, señalando la necesidad de guías físicas para el dedo en el dispositivo.
+        <div class="finding-box" style="border-left-color: #818cf8;">
+            <h5 style="margin:0 0 4px 0; color:#818cf8; font-size:0.9rem;">2. Ruido Óptico en Mediciones Inválidas</h5>
+            <p style="margin:0; font-size:0.84rem; color:#cbd5e1;">
+                El <b>{ai_context['tasa_invalidez_porcentaje']}%</b> de registros fallidos presenta calidad de señal media de <b>{ai_context['calidad_optica_max30102']['promedio_en_invalidas']}</b> vs <b>{ai_context['calidad_optica_max30102']['promedio_en_validas']}</b> en válidos, sugiriendo retiro prematuro del dedo.
             </p>
         </div>
-        <div class="insight-card">
-            <h5 style="margin: 0 0 4px 0; color: #34d399;">3. Estabilidad en la Población Estudiantil</h5>
-            <p style="margin: 0; font-size: 0.85rem; color: #cbd5e1;">
-                El 50% central de los registros válidos se ubica entre <b>{contexto_ia['fisiologia_valida']['bpm_q25_q75'][0]} y {contexto_ia['fisiologia_valida']['bpm_q25_q75'][1]} BPM</b>, lo que coincide con valores típicos de reposo universitario.
+        <div class="finding-box" style="border-left-color: #34d399;">
+            <h5 style="margin:0 0 4px 0; color:#34d399; font-size:0.9rem;">3. Consistencia Biomédica Poblacional</h5>
+            <p style="margin:0; font-size:0.84rem; color:#cbd5e1;">
+                El rango intercuartil se ubica entre <b>{ai_context['fisiologia_valida']['bpm_rango_intercuartil'][0]} y {ai_context['fisiologia_valida']['bpm_rango_intercuartil'][1]} BPM</b>, reflejando patrones de reposo esperados en estudiantes.
             </p>
         </div>
         """, unsafe_allow_html=True)
-        st.caption("⚠️ Nota: Dataset sintético con fines pedagógicos. El MAX30102 no es un dispositivo médico certificado.")
+        st.caption("⚠️ Nota: Dataset sintético con fines formativos. El MAX30102 no es un dispositivo médico certificado.")
 
 
 # ------------------------------------------------------------------------------
-# COLUMNA DERECHA: COPILOTO IA SIEMPRE VISIBLE (CONSOLA DEDICADA)
+# PANEL DERECHO: COPILOTO IA PERMANENTE (SIN AVATARES NARANJAS)
 # ------------------------------------------------------------------------------
 with col_copilot:
     st.markdown("""
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <span style="font-weight: 700; color: #f8fafc; font-size: 0.95rem;">🤖 Copiloto IA EAFIT</span>
-        <span style="font-size: 0.72rem; color: #38bdf8; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.25); padding: 2px 8px; border-radius: 9999px; font-family: 'JetBrains Mono', monospace;">ACTIVO</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-weight:700; color:#f8fafc; font-size:0.9rem;">🤖 Copiloto IA EAFIT</span>
+        <span style="font-size:0.68rem; color:#38bdf8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:9999px; font-family:'JetBrains Mono';">GPT-4o-mini</span>
     </div>
     """, unsafe_allow_html=True)
     
-    # Contenedor con altura acotada para evitar el estiramiento vertical de la página
-    chat_box = st.container(height=480)
+    # Contenedor con altura fija para evitar desajustes visuales
+    chat_stream = st.container(height=450)
     
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = [{
+    if "chat_messages" not in st.session_state:
+        st.session_state.chat_messages = [{
             "role": "assistant",
-            "content": "Hola. Analizo las 2.600 lecturas del tótem, patrones de afluencia y fallas del sensor MAX30102. ¿En qué decisión institucional puedo apoyarte?"
+            "content": "Conozco las 2.600 lecturas del tótem, patrones de campus y fallas de señal. ¿En qué análisis o decisión institucional te puedo apoyar?"
         }]
     
-    # Renderizado del historial
-    for message in st.session_state.chat_history:
-        with chat_box.chat_message(message["role"]):
-            st.markdown(f"<div style='font-size: 0.86rem; line-height: 1.45;'>{message['content']}</div>", unsafe_allow_html=True)
+    # Renderizado limpio sin avatares naranjas
+    for msg in st.session_state.chat_messages:
+        with chat_stream.chat_message(msg["role"]):
+            prefix = "🤖 **Copiloto:** " if msg["role"] == "assistant" else "👤 **Analista:** "
+            st.markdown(f"{prefix}{msg['content']}")
             
-    # Botones de consulta rápida
-    st.caption("Consultas inmediatas:")
-    b1, b2, b3 = st.columns(3)
-    quick_query = None
-    if b1.button("⏰ Picos", use_container_width=True):
-        quick_query = "¿Cuáles son las horas de mayor afluencia y qué horario de mantenimiento sugieres?"
-    if b2.button("📉 Ruido", use_container_width=True):
-        quick_query = "¿A qué se deben las lecturas inválidas y qué porcentaje representan?"
-    if b3.button("🫀 Alertas", use_container_width=True):
-        quick_query = "¿Qué anomalías de BPM o SpO2 destacan en los registros válidos?"
+    # Chips de consulta rápida de un clic
+    st.caption("Consultas rápidas:")
+    c1, c2, c3 = st.columns(3)
+    prompt_click = None
+    if c1.button("⏰ Picos", use_container_width=True):
+        prompt_click = "¿Cuáles son las horas de mayor afluencia y qué horario de mantenimiento sugieres?"
+    if c2.button("📉 Ruido", use_container_width=True):
+        prompt_click = "¿A qué se deben las lecturas inválidas y qué porcentaje representan?"
+    if c3.button("🫀 Alertas", use_container_width=True):
+        prompt_click = "¿Qué anomalías de BPM o SpO2 destacan en los registros válidos?"
 
-    # Entrada de texto del usuario
-    user_prompt = st.chat_input("Pregunta sobre métricas, horas o planes...") or quick_query
-    
-    if user_prompt:
+    user_query = st.chat_input("Escribe tu consulta analítica...") or prompt_click
+
+    if user_query:
         if not api_key_input:
-            st.warning("⚠️ Introduce tu OpenAI API Key en la barra lateral para consultar al copiloto.")
+            st.warning("⚠️ Ingresa tu OpenAI API Key en el campo superior derecho.")
         else:
-            st.session_state.chat_history.append({"role": "user", "content": user_prompt})
-            with chat_box.chat_message("user"):
-                st.markdown(f"<div style='font-size: 0.86rem;'>{user_prompt}</div>", unsafe_allow_html=True)
+            st.session_state.chat_messages.append({"role": "user", "content": user_query})
+            with chat_stream.chat_message("user"):
+                st.markdown(f"👤 **Analista:** {user_query}")
                 
-            with chat_box.chat_message("assistant"):
-                with st.spinner("Analizando registros..."):
+            with chat_stream.chat_message("assistant"):
+                with st.spinner("Analizando..."):
                     try:
                         client = openai.OpenAI(api_key=api_key_input)
                         
-                        system_instructions = f"""
-                        Eres el asesor analítico de IoT del proyecto Tótem Fisiológico EAFIT.
-                        Tienes acceso a los parámetros globales del dataset completo:
-                        {json.dumps(contexto_ia, ensure_ascii=False)}
+                        system_prompt = f"""
+                        Eres el asesor analítico de IoT del Tótem EAFIT.
+                        Base de conocimiento del dataset completo:
+                        {json.dumps(ai_context, ensure_ascii=False)}
                         
-                        Filtros aplicados actualmente en pantalla:
-                        - Registros visibles: {len(df_view)}
-                        - Estudiante seleccionado: {filtro_estudiante}
-                        - Condición de validez: {filtro_estado}
+                        Filtros visibles en pantalla:
+                        - Registros: {len(df_view)}
+                        - Estudiante: {filtro_estudiante}
+                        - Condición: {filtro_estado}
                         
                         Instrucciones:
-                        1. Sé conciso, profesional y estructurado (emplea viñetas para datos numéricos).
+                        1. Sé conciso, profesional y estructurado con viñetas.
                         2. Cita cifras exactas del contexto analítico (porcentajes, horas pico, BPM).
-                        3. Propón decisiones operativas concretas para el campus.
+                        3. Orienta hacia decisiones operativas de bienestar universitario.
                         4. Mantén la aclaración ética de que no se emiten diagnósticos clínicos.
                         """
                         
-                        conversation_payload = [{"role": "system", "content": system_instructions}] + [
-                            {"role": m["role"], "content": m["content"]} for m in st.session_state.chat_history[-5:]
+                        messages_payload = [{"role": "system", "content": system_prompt}] + [
+                            {"role": m["role"], "content": m["content"]} for m in st.session_state.chat_messages[-5:]
                         ]
                         
-                        api_response = client.chat.completions.create(
+                        resp = client.chat.completions.create(
                             model="gpt-4o-mini",
-                            messages=conversation_payload,
+                            messages=messages_payload,
                             temperature=0.3
                         )
-                        bot_text = api_response.choices[0].message.content
-                        st.markdown(f"<div style='font-size: 0.86rem; line-height: 1.45;'>{bot_text}</div>", unsafe_allow_html=True)
-                        st.session_state.chat_history.append({"role": "assistant", "content": bot_text})
+                        reply = resp.choices[0].message.content
+                        st.markdown(f"🤖 **Copiloto:** {reply}")
+                        st.session_state.chat_messages.append({"role": "assistant", "content": reply})
                     except Exception as err:
-                        st.error(f"Error de comunicación con OpenAI: {err}")
+                        st.error(f"Error de comunicación: {err}")
