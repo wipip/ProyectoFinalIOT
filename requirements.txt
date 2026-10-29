@@ -6,3 +6,5 @@ pandas
 plotly
 requests
 openpyxl
+openai
+scikit-learn
